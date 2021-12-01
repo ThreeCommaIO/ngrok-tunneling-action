@@ -1,30 +1,70 @@
-name: 'Ngrok TCP Tunelling'
-description: 'A github action for tunelling TCP traffic from within Workflow environemt'
+name: "Ngrok TCP Tunelling"
+description: "A github action for tunelling TCP traffic from within Workflow environemt"
 
 branding:
-  icon: 'activity'  
-  color: 'green'
+  icon: "activity"
+  color: "green"
 
 inputs:
-  timeout:  
-    description: 'Challenge deployment timeout'
+  timeout:
+    description: "Challenge deployment timeout"
     required: true
-    default: '1h'
+    default: "1h"
   port:
-    description: 'The port to forward traffic to'
-    required: true
+    description: "The port to forward traffic to"
+    default: "8080"
+    required: false
   ngrok_authtoken:
-    description: 'Ngrok authorization token'
-    required: true
-
+    description: "Ngrok authorization token"
+    required: false
+  protocol:
+    description: "The protocol to forward traffic to"
+    default: "http" # http, tcp, tls
+    required: false
+  run_in_background:
+    description: "Run the action in the background"
+    default: "false"
+    required: false
+outputs:
+  http-url:
+    description: "The ngrok public http url"
+    value: ${{ steps.ngrok.outputs.http-url }}
+  https-url:
+    description: "The ngrok public https url"
+    value: ${{ steps.ngrok.outputs.https-url }}
+  tcp-url:
+    description: "The ngrok public tcp url"
+    value: ${{ steps.ngrok.outputs.tcp-url }}
 runs:
   using: "composite"
-  steps: 
+  steps:
     - run: wget https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
       shell: bash
     - run: unzip -qq ngrok-stable-linux-amd64.zip
       shell: bash
     - run: ./ngrok authtoken ${{ inputs.ngrok_authtoken }}
       shell: bash
-    - run: timeout ${{ inputs.timeout }} ./ngrok tcp ${{ inputs.port }}
+      if: ${{ inputs.ngrok_authtoken != '' }}
+    - run: timeout ${{ inputs.timeout }} ./ngrok ${{ inputs.protocol }} ${{ inputs.port }}
       shell: bash
+      if: ${{ inputs.run_in_background == 'false' }}
+    - run: timeout ${{ inputs.timeout }} ./ngrok ${{ inputs.protocol }} ${{ inputs.port }} > /dev/null 2>&1 &
+      shell: bash
+      if: ${{ inputs.run_in_background == 'true' }}
+    - run: |
+        # wait for ngrok to start
+        while true; do
+          ngrok_status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4040/api/tunnels)
+          if [ "$ngrok_status" == "200" ]; then
+            break
+          fi
+          sleep 1
+        done
+        HTTP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "http")')
+        HTTPS_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "https")')
+        TCP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "tcp")')
+        echo "::set-output name=http-url::$(echo $HTTP_URL)"
+        echo "::set-output name=https-url::$(echo $HTTPS_URL)"
+        echo "::set-output name=tcp-url::$(echo $TCP_URL)"
+      shell: bash
+      id: ngrok
