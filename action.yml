@@ -60,9 +60,9 @@ runs:
           fi
           sleep 1
         done
-        HTTP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "http")')
-        HTTPS_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "https")')
-        TCP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "tcp")')
+        HTTP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "http") | .public_url')
+        HTTPS_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "https") | .public_url')
+        TCP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "tcp") | .public_url')
         echo "::set-output name=http-url::$(echo $HTTP_URL)"
         echo "::set-output name=https-url::$(echo $HTTPS_URL)"
         echo "::set-output name=tcp-url::$(echo $TCP_URL)"
