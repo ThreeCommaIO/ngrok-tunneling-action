@@ -60,6 +60,7 @@ runs:
           fi
           sleep 1
         done
+        curl -vv http://localhost:4040/api/tunnels
         HTTP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "http") | .public_url')
         HTTPS_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "https") | .public_url')
         TCP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "tcp") | .public_url')
