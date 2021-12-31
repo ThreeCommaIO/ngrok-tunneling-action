@@ -54,15 +54,16 @@ runs:
     - run: |
         # wait for ngrok to start
         while true; do
-          ngrok_status=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels')
+          curl -s http://localhost:4040/api/tunnels > tunnels.txt
+          ngrok_status=$(jq -r '.tunnels' tunnels.txt)
           if [ "$ngrok_status" != "[]" ]; then
             break
           fi
           sleep 1
         done
-        HTTP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "http") | .public_url')
-        HTTPS_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "https") | .public_url')
-        TCP_URL=$(curl -s http://localhost:4040/api/tunnels  | jq -r '.tunnels[] | select (.proto == "tcp") | .public_url')
+        HTTP_URL=$(jq -r '.tunnels[] | select (.proto == "http") | .public_url' tunnels.txt)
+        HTTPS_URL=$(jq -r '.tunnels[] | select (.proto == "https") | .public_url' tunnels.txt)
+        TCP_URL=$(jq -r '.tunnels[] | select (.proto == "tcp") | .public_url' tunnels.txt)
         echo "::set-output name=http-url::$(echo $HTTP_URL)"
         echo "::set-output name=https-url::$(echo $HTTPS_URL)"
         echo "::set-output name=tcp-url::$(echo $TCP_URL)"
